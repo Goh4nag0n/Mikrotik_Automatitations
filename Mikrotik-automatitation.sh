@@ -1,4 +1,4 @@
-#!/bin/bash
+##!/bin/bash
 
 #Colours
 greenColour="\e[0;32m\033[1m"
@@ -16,6 +16,49 @@ function ctrl_c (){
   echo -e "\n\n Saliendo..."
   exit 1
 }
+
+function helpPanel (){
+  clear
+  echo -e "\n${yellowColour}[+]${endColour}${grayColour} Uso:${endColour}"
+  echo -e "\t${blueColour}u)${endColour}${grayColour} Usuario para conexion ssh${endColour}"
+  echo -e "\t${blueColour}i)${endColour}${grayColour} direccion ipv4 del router Mikrotik${endColour}"
+  echo -e "\t${blueColour}p)${endColour}${grayColour} puerto ssh${endColour}"
+  echo -e "\t${blueColour}f)${endColour}${grayColour} Filtramos la data de los usuarios del servidor Mikrotik${endColour} ${purpleColour}->${endColour} ${redColour}(-f -u usuario -i direccion -p puerto)${endColour}"
+  echo -e "\t${blueColour}q)${endColour}${grayColour} hacer pcq con rafagas, generar colas simples determinar y verificar si hay colas previamente creadas${endColour}${purpleColour} ->${endColour}${redColour} (-q -u usuario -i direccion -p puerto)${endColour}"
+  echo -e "\t${blueColour}b)${endColour}${grayColour} hacer backups de equipos Mikrotik y subir backups a equipos mikrotik${endColour}${purpleColour} ->${endColour} ${redColour}(-b -u usuario -i direccion -p puerto)${endColour}"
+}
+
+
+function activeSSHConnection(){
+
+    if [ "$port" == 22 ]; then
+      if ssh $user@$ip; then
+        echo -e "\n${yellowColour}[+]${endColour}${grayColour} La conexion fue exitosa con el siguiente comando...${endColour} ${purpleColour}->${endColour} ${blueColour}[ssh $user@$ip]${endColour}"
+        sleep 1
+        clear
+        comando="ssh $user@$ip"
+        comando2="scp $user@$ip"
+      else 
+        echo -e "\n${redColour}[!] Usuario o clave erroneo${endColour}"
+        exit 1
+      fi
+    else
+      if ssh -p $port $user@$ip; then
+        echo -e "\n${yellowColour}[+]${endColour}${grayColour} La conexion fue exitosa con el siguiente comando...${endColour}${purpleColour} ->${endColour} ${blueColour}[ssh $user@$ip -p $port]${endColour}"
+        sleep 1
+        clear
+        comando="ssh $user@$ip -p $port"
+        comando2="scp -P $port $user@$ip"
+      else
+        echo -e "\n${redColour}[!] Usuario o clave erroneo${endColour}"
+        exit 1
+      fi
+    fi
+
+     
+}
+
+
 
 function checkSSHConnection(){
   while true; do
@@ -39,53 +82,109 @@ function checkSSHConnection(){
   done
 }
 
+function verifyQueuesimple(){
+  #verificar si hay colas simples creadas
+  echo -e "\n${yellowColour}[+]${endColour}${grayColour} Verificamos si tienes colas simples creadas...${endColour}"
+  if [ "$port" == 22 ]; then
 
-function helpPanel (){
-  clear
-  echo -e "\n${yellowColour}[+]${endColour}${grayColour} Uso:${endColour}"
-  echo -e "\t${blueColour}u)${endColour}${grayColour} Usuario para conexion ssh${endColour}"
-  echo -e "\t${blueColour}i)${endColour}${grayColour} direccion ipv4 del router Mikrotik${endColour}"
-  echo -e "\t${blueColour}p)${endColour}${grayColour} puerto ssh${endColour}"
-  echo -e "\t${blueColour}f)${endColour}${grayColour} Filtramos la data de los usuarios del servidor Mikrotik${endColour} ${purpleColour}->${endColour} ${redColour}(-f -u usuario -i direccion -p puerto)${endColour}"
-  echo -e "\t${blueColour}q)${endColour}${grayColour} hacer pcq con rafagas, generar colas simples determinar y verificar si hay colas previamente creadas${endColour}${purpleColour} ->${endColour}${redColour} (-q -u usuario -i direccion -p puerto)${endColour}"
-  echo -e "\t${blueColour}b)${endColour}${grayColour} hacer backups de equipos Mikrotik y subir backups a equipos mikrotik${endColour}${purpleColour} ->${endColour} ${redColour}(-b -u usuario -i direccion -p puerto)${endColour}"
+    sshpass -p "$password" ssh $user@$ip queue simple print file=colasenequipo.txt
+    sshpass -p "$password" scp $user@$ip:/colasenequipo.txt .
+
+    archivo=colasenequipo.txt
+    bytes=$(stat -c %s $archivo)
+
+    if [ $bytes -gt 117 ]; then
+
+      echo -e "\n${yellowColour}[+]${endColour}${grayColour} Tienes colas simples en el equipo...${endColour}"
+
+      echo -e "\n${yellowColour}[+]${endColour}${grayColour} Quieres borrar el contenido de queue simple (si o no)?${endColour}" && read sino 
+      while true; do
+        if [ "$sino" == si ]; then
+
+          echo -e "\n${yellowColour}[+]${endColour}${grayColour} Borrando las colas en el equipo...${endColour}"
+          sshpass -p "$password" ssh $user@$ip queue simple remove [find]
+          break
+
+        elif [ "$sino" == no ]; then
+          echo -e "\n${yellowColour}[+]${endColour}${grayColour} Seguimos con el flujo del programa${endColour}"
+          break
+        else
+          echo -e "${redColour}[!] Solo puedes responder con si o no en minusculas${endColour}"
+          
+          echo -e "\n${yellowColour}[+]${endColour}${grayColour} Quieres borrar el contenido de queue simple (si o no)?${endColour}" && read sino 
+        fi
+      done
+    elif [ $bytes -eq 114 ]; then
+      
+      echo -e "\n${yellowColour}[+]${endColour}${grayColour} No hay contenido en el archivo:${endColour}"
+     
+    elif [ $bytes -eq 117 ]; then
+      
+      echo -e "\n${yellowColour}[+]${endColour}${grayColour} No hay contenido en el archivo:${endColour}"
+     
+    fi
+
+  else
+    sshpass -p "$password" ssh -p $port $user@$ip queue simple print file=colasenequipo
+    sshpass -p "$password" scp -P $port $user@$ip:/colasenequipo.txt .
+    
+    archivo=colasenequipo.txt
+    bytes=$(stat -c %s $archivo) 
+    if [ $bytes -gt 117 ]; then
+
+      echo -e "\n${yellowColour}[+]${endColour}${grayColour} Tienes colas simples en el equipo...${endColour}"
+
+      echo -e "\n${yellowColour}[+]${endColour}${grayColour} Quieres borrar el contenido de queue simple (si o no)?${endColour}" && read sino 
+      while true; do
+        if [ "$sino" == si ]; then
+
+          echo -e "\n${yellowColour}[+]${endColour}${grayColour} Borrando las colas en el equipo...${endColour}"
+          sshpass -p "$password" ssh -p $port $user@$ip queue simple remove [find]
+          break
+
+        elif [ "$sino" == no ]; then
+          echo -e "\n${yellowColour}[+]${endColour}${grayColour} Seguimos con el flujo del programa${endColour}"
+          break
+        else
+          echo -e "${redColour}[!] Solo puedes responder con si o no en minusculas${endColour}"
+          
+          echo -e "\n${yellowColour}[+]${endColour}${grayColour} Quieres borrar el contenido de queue simple (si o no)?${endColour}" && read sino 
+        fi
+      done
+    elif [ $bytes -eq 117 ]; then
+      
+      echo -e "\n${yellowColour}[+]${endColour}${grayColour} No hay contenido en el archivo:${endColour}"
+
+    else
+      echo -e "\n${yellowColour}[+]${endColour}${grayColour} No hay contenido en el archivo:${endColour}"
+    
+    fi
+  fi 
+  rm colasenequipo.txt
+
 }
+
+
 
 function filterData (){
   user=$1
   ip=$2
   port=$3
   
-  if [ "$port" == 22 ]; then
-    echo -e "\n${yellowColour}[+]${endColour}${grayColour} Este es el comando${endColour} ${purpleColour}->${endColour} ${blueColour}[ssh $user@$ip]${endColour}"
-    sleep 1
-    ssh $user@$ip
-    clear
-    comando="ssh $user@$ip"
-    comando2="scp $user@$ip"
+  activeSSHConnection
 
-  else
-    echo -e "\n${yellowColour}[+]${endColour}${grayColour} Este es el comando${endColour}${purpleColour} ->${endColour} ${blueColour}[ssh $user@$ip -p $port]${endColour}"
-    sleep 1
-    ssh $user@$ip -p $port 
-    clear
-    comando="ssh $user@$ip -p $port"
-    comando2="scp -P $port $user@$ip"
-  fi
+  echo -e "${yellowColour}\n[+]${endColour} ${grayColour}Almacenar clave${endColour}${purpleColour} ->${endColour}"&& read password
+  checkSSHConnection
 
-    echo -e "${yellowColour}\n[+]${endColour} ${grayColour}Almacenar clave${endColour}${purpleColour} ->${endColour}"&& read password
+  echo -e "${yellowColour}\n[+]${endColour}${grayColour} Que lista quieres descargar del mikrotik${endColour}${purpleColour} ->${endColour}"&& read address_list
+  echo -e "${yellowColour}\n[+]${endColour}${grayColour} en que archivo quieres que guarde la data${endColour}${purpleColour} ->${endColour}"&& read file
+  echo -e "\n${yellowColour}\n[+]${endColour}${grayColour} filtrando data en mikrotik...${endColour}"
+  sshpass -p "$password" $comando ip firewall address-list print file=$file where list=$address_list
+  echo -e "\n${yellowColour}\n[+]${endColour}${grayColour} Descargando data...${endColour}"
+  sshpass -p "$password" $comando2:/$file.txt .
+  echo -e "\n${yellowColour}\n[+]${endColour}${grayColour} Filtramos y guardamos la informacion importante...${endColour}"
 
-    checkSSHConnection
-
-    echo -e "${yellowColour}\n[+]${endColour}${grayColour} Que lista quieres descargar del mikrotik${endColour}${purpleColour} ->${endColour}"&& read address_list
-    echo -e "${yellowColour}\n[+]${endColour}${grayColour} en que archivo quieres que guarde la data${endColour}${purpleColour} ->${endColour}"&& read file
-    echo -e "\n${yellowColour}\n[+]${endColour}${grayColour} filtrando data en mikrotik...${endColour}"
-    sshpass -p "$password" $comando ip firewall address-list print file=$file where list=$address_list
-    echo -e "\n${yellowColour}\n[+]${endColour}${grayColour} Descargando data...${endColour}"
-    sshpass -p "$password" $comando2:/$file.txt .
-    echo -e "\n${yellowColour}\n[+]${endColour}${grayColour} Filtramos y guardamos la informacion importante...${endColour}"
-
-    cat $file.txt | awk 'NR>5 {print $4}' | sponge $file.txt
+  cat $file.txt | awk 'NR>5 {print $4}' | sponge $file.txt
 
 }
 
@@ -97,6 +196,7 @@ function queueSimple (){
 
   #DEFINIR RAFAGAS Y COLAS
   echo -e "${yellowColour}[+]${endColour}${grayColour} Cuanto es lo minimo que quieres que naveguen los usuarios...${endColour}"&& read pcqRate
+  
 
   echo -e "\n${yellowColour}[+]${endColour}${grayColour} Vamos a crear el pcq para las rafagas, primero el threshold...${endColour}"&& read thresHold
   
@@ -161,73 +261,7 @@ function queueSimple (){
     fi
   done
 
-  echo -e "\n${yellowColour}[+]${endColour}${grayColour} Verificamos si tienes colas simples creadas...${endColour}"
-  if [ "$port" == 22 ]; then
-
-    sshpass -p "$password" ssh $user@$ip queue simple print file=colasenequipo.txt
-    sshpass -p "$password" scp $user@$ip:/colasenequipo.txt .
-
-    archivo=colasenequipo.txt
-
-    if [ -s "$archivo" ]; then
-
-      echo -e "\n${yellowColour}[+]${endColour}${grayColour} Tienes colas simples en el equipo...${endColour}"
-
-      echo -e "\n${yellowColour}[+]${endColour}${grayColour} Quieres borrar el contenido de queue simple (si o no)?${endColour}" && read sino 
-      while true; do
-        if [ "$sino" == si ]; then
-
-          echo -e "\n${yellowColour}[+]${endColour}${grayColour} Borrando las colas en el equipo...${endColour}"
-          sshpass -p "$password" ssh $user@$ip queue simple remove [find]
-          break
-
-        elif [ "$sino" == no ]; then
-          echo -e "\n${yellowColour}[+]${endColour}${grayColour} Seguimos con el flujo del programa${endColour}"
-          break
-        else
-          echo -e "${redColour}[!] Solo puedes responder con si o no en minusculas${endColour}"
-          
-          echo -e "\n${yellowColour}[+]${endColour}${grayColour} Quieres borrar el contenido de queue simple (si o no)?${endColour}" && read sino 
-        fi
-      done
-    else
-      echo -e "\n${yellowColour}[+]${endColour}${grayColour} No hay contenido en el archivo:${endColour}"
-    
-    fi
-
-  else
-    sshpass -p "$password" ssh -p $port $user@$ip queue simple print file=colasenequipo
-    sshpass -p "$password" scp -P $port $user@$ip:/colasenequipo.txt .
-    
-    archivo=colasenequipo.txt
-
-    if [ -s "$archivo" ]; then
-
-      echo -e "\n${yellowColour}[+]${endColour}${grayColour} Tienes colas simples en el equipo...${endColour}"
-
-      echo -e "\n${yellowColour}[+]${endColour}${grayColour} Quieres borrar el contenido de queue simple (si o no)?${endColour}" && read sino 
-      while true; do
-        if [ "$sino" == si ]; then
-
-          echo -e "\n${yellowColour}[+]${endColour}${grayColour} Borrando las colas en el equipo...${endColour}"
-          sshpass -p "$password" ssh $user@$ip queue simple remove [find]
-          break
-
-        elif [ "$sino" == no ]; then
-          echo -e "\n${yellowColour}[+]${endColour}${grayColour} Seguimos con el flujo del programa${endColour}"
-          break
-        else
-          echo -e "${redColour}[!] Solo puedes responder con si o no en minusculas${endColour}"
-          
-          echo -e "\n${yellowColour}[+]${endColour}${grayColour} Quieres borrar el contenido de queue simple (si o no)?${endColour}" && read sino 
-        fi
-      done
-    else
-      echo -e "\n${yellowColour}[+]${endColour}${grayColour} No hay contenido en el archivo:${endColour}"
-    
-    fi
-  fi 
-  rm colasenequipo.txt
+  verifyQueuesimple
 
   #creamos cola simple 
   echo -e "\n${yellowColour}[+]${endColour}${grayColour} Archivos en carpeta....${endColour}\n"
@@ -252,6 +286,8 @@ function queueSimple (){
     fi
   done
 
+
+  #AQUI INSERTAMOS LA COLAS EN LE MIKROTIK
   touch colas.txt
   colas=colas.txt
   declare -i cantidad=0
@@ -291,52 +327,68 @@ function backupMikrotik(){
   port=$3
   clear
 
-  if [ "$port" == 22 ]; then
-    echo -e "\n${yellowColour}[+]${endColour}${grayColour} Este es el comando${endColour} ${purpleColour}->${endColour} ${blueColour}[ssh $user@$ip]${endColour}"
-    sleep 1
-    ssh $user@$ip
-    clear
-    comando="ssh $user@$ip"
-    comando2="scp $user@$ip"
+  activeSSHConnection
 
-  else
-    echo -e "\n${yellowColour}[+]${endColour}${grayColour} Este es el comando${endColour}${purpleColour} ->${endColour} ${blueColour}[ssh $user@$ip -p $port]${endColour}"
-    sleep 1
-    ssh $user@$ip -p $port 
-    clear
-    comando="ssh $user@$ip -p $port"
-    comando2="scp -P $port $user@$ip"
-  fi
+  echo -e "${yellowColour}\n[+]${endColour} ${grayColour}Almacenar clave${endColour}${purpleColour} ->${endColour}"&& read password
+  checkSSHConnection
+   
+  backup=backups
+  cd backups
+  echo -e "${yellowColour}[+]${endColour}${grayColour} Que version es tu mikrotik (6 o 7)?${endColour}"&& read version 
 
-    echo -e "${yellowColour}\n[+]${endColour} ${grayColour}Almacenar clave${endColour}${purpleColour} ->${endColour}"&& read password
+  while true; do
+    if [ "$version" == "6" ]; then
+      echo -e "\n${yellowColour}[+]${endColour}${grayColour} Como quieres que se llame el backup:${endColour}\n"&& read nombre 
+      sshpass -p "$password" $comando export file=$nombre
+      sshpass -p "$password" $comando2:/$nombre.rsc . 
+      
+      echo -e "\n${yellowColour}[+]${endColour}${grayColour} Esta listo el backup...${endColour}"
+      echo -e "\n${yellowColour}[+]${endColour}${grayColour} Quieres subir el backup al mikrotik? (si o no)...${endColour}"&& read respuesta
+        while true; do 
+          if [ "$respuesta" == "si" ]; then
+            echo -e "${yellowColour}[+]${endColour}${grayColour} Subiendo archivos...${endColour}"
+            break
 
-    checkSSHConnection
-    
+          elif [ "$respuesta" == "no" ]; then
+            echo -e "\n${yellowColour}[+]${endColour}${grayColour} Concluimos con el programa${endColour}"
+            break 
+          else 
 
-    
-    mkdir backups
-    cd backups
+            echo -e "${redColour}[!] Solo puedes responder con si o no en minusculas...${endColour}"
+            echo -e "\n${yellowColour}[+]${endColour}${grayColour} Quieres subir el backup al mikrotik? (si o no)...${endColour}"&& read respuesta
+          fi 
+        done
+      break
+    elif [ "$version" == "7" ]; then
+      echo -e "\n${yellowColour}[+]${endColour}${grayColour} Como quieres que se llame el backup:${endColour}\n"&& read nombre 
+      sshpass -p "$password" $comando export show-sensitive file=$nombre
+      sshpass -p "$password" $comando2:/$nombre.rsc . 
+      
+      echo -e "\n${yellowColour}[+]${endColour}${grayColour} Esta listo el backup...${endColour}"
+      echo -e "\n${yellowColour}[+]${endColour}${grayColour} Quieres subir el backup al mikrotik? (si o no)...${endColour}"&& read respuesta
+        while true; do 
+          if [ "$respuesta" == "si" ]; then
+            echo -e "${yellowColour}[+]${endColour}${grayColour} Subiendo archivos...${endColour}"
+            break
 
-    echo -e "\n${yellowColour}[+]${endColour}${grayColour} Como quieres que se llame el backup:${endColour}\n"&& read nombre 
-    sshpass -p "$password" $comando export file=$nombre
-    sshpass -p "$password" $comando2:/$nombre.rsc . 
-  
-  echo -e "\n${yellowColour}[+]${endColour}${grayColour} Esta listo el backup...${endColour}"
-  echo -e "\n${yellowColour}[+]${endColour}${grayColour} Quieres subir el backup al mikrotik? (si o no)...${endColour}"&& read respuesta
-    while true; do 
-      if [ "$respuesta" == "si" ]; then
-        echo -e "${yellowColour}[+]${endColour}${grayColour} Subiendo archivos...${endColour}"
-        break
+          elif [ "$respuesta" == "no" ]; then
+            echo -e "\n${yellowColour}[+]${endColour}${grayColour} Concluimos con el programa${endColour}"
+            break 
+          else 
 
-      elif [ "$respuesta" == "no" ]; then
-        echo -e "\n${yellowColour}[+]${endColour}${grayColour} Concluimos con el programa${endColour}"
-        break 
-      else 
+            echo -e "${redColour}[!] Solo puedes responder con si o no en minusculas...${endColour}"
+            echo -e "\n${yellowColour}[+]${endColour}${grayColour} Quieres subir el backup al mikrotik? (si o no)...${endColour}"&& read respuesta
+          fi 
+        done
+      break
+    else 
+      echo -e "${redColour}[!] Version erronea....${endColour}"
 
-        echo -e "${redColour}[!] Solo puedes responder con si o no en minusculas...${endColour}"
-        echo -e "\n${yellowColour}[+]${endColour}${grayColour} Quieres subir el backup al mikrotik? (si o no)...${endColour}"&& read respuesta
-      fi 
-    done
+      echo -e "${yellowColour}[+]${endColour}${grayColour} Que version es tu mikrotik (6 o 7)?${endColour}"&& read version 
+    fi
+  done
+
+
 }
 #contadores
 declare -i chivato_ip=0
@@ -367,4 +419,5 @@ elif [ $parameter_counter -eq 3 ] && [ $chivato_user -eq 1 ] && [ $chivato_ip -e
 else
   helpPanel 
 fi
+
 
