@@ -332,7 +332,7 @@ function backupMikrotik(){
   echo -e "${yellowColour}\n[+]${endColour} ${grayColour}Almacenar clave${endColour}${purpleColour} ->${endColour}"&& read password
   checkSSHConnection
    
-  backup=backups
+  mkdir backups
   cd backups
   echo -e "${yellowColour}[+]${endColour}${grayColour} Que version es tu mikrotik (6 o 7)?${endColour}"&& read version 
 
