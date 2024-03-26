@@ -1,4 +1,4 @@
-##!/bin/bash
+#!/bin/bash
 
 #Colours
 greenColour="\e[0;32m\033[1m"
@@ -25,7 +25,10 @@ function helpPanel (){
   echo -e "\t${blueColour}p)${endColour}${grayColour} puerto ssh${endColour}"
   echo -e "\t${blueColour}f)${endColour}${grayColour} Filtramos la data de los usuarios del servidor Mikrotik${endColour} ${purpleColour}->${endColour} ${redColour}(-f -u usuario -i direccion -p puerto)${endColour}"
   echo -e "\t${blueColour}q)${endColour}${grayColour} hacer pcq con rafagas, generar colas simples determinar y verificar si hay colas previamente creadas${endColour}${purpleColour} ->${endColour}${redColour} (-q -u usuario -i direccion -p puerto)${endColour}"
-  echo -e "\t${blueColour}b)${endColour}${grayColour} hacer backups de equipos Mikrotik y subir backups a equipos mikrotik${endColour}${purpleColour} ->${endColour} ${redColour}(-b -u usuario -i direccion -p puerto)${endColour}"
+  echo -e "\t${blueColour}b)${endColour}${grayColour} hacer backups de equipos Mikrotik ${endColour}${purpleColour} ->${endColour}"   
+  echo -e "\t${redColour}(-b -u usuario -i direccion -p puerto)${endColour}"
+  echo -e "\t${blueColour}s)${endColour}${grayColour} Enviar archivos al Mikrotik en caso de ser necesario que sea backup recordar ponerle de nombre de subida .rsc${endColour}${purpleColour} ->${endColour}"
+  echo -e "\t${redColour}(-s -u usuario -i direccion -p puerto)${endColour}"
 }
 
 
@@ -34,7 +37,7 @@ function activeSSHConnection(){
     if [ "$port" == 22 ]; then
       if ssh $user@$ip; then
         echo -e "\n${yellowColour}[+]${endColour}${grayColour} La conexion fue exitosa con el siguiente comando...${endColour} ${purpleColour}->${endColour} ${blueColour}[ssh $user@$ip]${endColour}"
-        sleep 1
+        sleep 4
         clear
         comando="ssh $user@$ip"
         comando2="scp $user@$ip"
@@ -45,17 +48,16 @@ function activeSSHConnection(){
     else
       if ssh -p $port $user@$ip; then
         echo -e "\n${yellowColour}[+]${endColour}${grayColour} La conexion fue exitosa con el siguiente comando...${endColour}${purpleColour} ->${endColour} ${blueColour}[ssh $user@$ip -p $port]${endColour}"
-        sleep 1
+        sleep 4
         clear
         comando="ssh $user@$ip -p $port"
         comando2="scp -P $port $user@$ip"
+        comando3="scp -P $port -r ./$archivo2 $user@$ip:$archivo3"
       else
         echo -e "\n${redColour}[!] Usuario o clave erroneo${endColour}"
         exit 1
       fi
     fi
-
-     
 }
 
 
@@ -161,10 +163,26 @@ function verifyQueuesimple(){
     fi
   fi 
   rm colasenequipo.txt
-
 }
 
+function reusoQueuing (){
+  echo -e "${yellowColour}[+]${endColour}${grayColour} Cuanto ancho de banda tienes en la red?${endColour}"&& read total
+  echo -e "${yellowColour}[+]${endColour}${grayColour} Cuantos planes tienes?${endColour}"&& read number1
 
+  total_megas=0
+  for ((i=1; i<=$number1; i++)); do
+    echo -e "\n${yellowColour}[+]${endColour}${grayColour} Cuantos megas equivale el plan?${endColour}"&& read plan
+    echo -e "\n${yellowColour}[+]${endColour}${grayColour} Cuantos usuarios tiene este plan?${endColour}"&& read user 
+    cantidad=$(($plan * $user))
+    echo -e "\n${yellowColour}[+]${endColour}${grayColour} Tienes que tener un total ${endColour}${greenColour}${cantidad}M${endColour}${grayColour} para tener 1 mega por cada usuario de este plan${endColour}"
+    sleep 2
+    total_megas=$(($total_megas + $cantidad))
+    sleep 1
+  done
+  reuso=$(echo "scale=2; $total_megas / $total" | bc)  
+  echo -e "\n${yellowColour}[+]${endColour}${grayColour} tu reuso es de ${endColour}${purpleColour}$reuso${endColour}${grayColour} por usuario${endColour}"
+
+}
 
 function filterData (){
   user=$1
@@ -185,7 +203,6 @@ function filterData (){
   echo -e "\n${yellowColour}\n[+]${endColour}${grayColour} Filtramos y guardamos la informacion importante...${endColour}"
 
   cat $file.txt | awk 'NR>5 {print $4}' | sponge $file.txt
-
 }
 
 function queueSimple (){
@@ -276,7 +293,7 @@ function queueSimple (){
     else 
       echo -e "\n${redColour}[!] El archivo no existe o no tiene contenido...${endColour}"
 
-      echo -e "\n${yellowColour}[+]${endColour}${grayColour} Si no tienes ningun archivo debes primero ejecutar la funcion ${endColour}${blueColour}filterData${endColour}${redColour} (pon CTRL+C para parar el flujo del programa y empezar de nuevo)${endColour}"
+      echo -e "\n${yellowColour}[+]${endColour}${grayColour} Si no tienes ningun archivo debes primero ejecutar la funcion ${endColour}${blueColour}filterData${endColour}${redColour} (pon CTRL+C para detener el flujo del programa y empezar de nuevo)${endColour}"
 
       echo -e "\n${yellowColour}[+]${endColour}${grayColour} Archivos en carpeta....${endColour}\n"
   
@@ -295,6 +312,7 @@ function queueSimple (){
   while read line; do 
 
     echo -e "${yellowColour}[+]${endColour}${grayColour} Insertando cola con la siguiente ip:${endColour}${blueColour} $line ${endColour}"
+    sleep 0.4
     let cantidad+=1
  
     if [ "$port" == 22 ]; then
@@ -309,10 +327,10 @@ function queueSimple (){
 
   done < $archivo 
   tput civis
-  echo -e "${yellowColour}[+]${endColour}${grayColour} Estamos ingresando un total de${endColour}${blueColour} $cantidad${endColour}${grayColour} colas${endColour}"
+  echo -e "\n${yellowColour}[+]${endColour}${grayColour} Estamos ingresando un total de${endColour}${blueColour} $cantidad${endColour}${grayColour} colas${endColour}"
   sleep 5
   clear
-  echo -e "${yellowColour}[+]${endColour}${grayColour} Empezamos a ingresar las colas por favor paciencia...${endColour}"
+  echo -e "\n${yellowColour}[+]${endColour}${grayColour} Empezamos a ingresar las colas por favor paciencia...${endColour}"
   bash colas.txt
   tput cnorm
   echo -e "\n${yellowColour}[+]${endColour}${grayColour} Se terminaron de crear las colas....${endColour}"
@@ -344,20 +362,6 @@ function backupMikrotik(){
       
       echo -e "\n${yellowColour}[+]${endColour}${grayColour} Esta listo el backup...${endColour}"
       echo -e "\n${yellowColour}[+]${endColour}${grayColour} Quieres subir el backup al mikrotik? (si o no)...${endColour}"&& read respuesta
-        while true; do 
-          if [ "$respuesta" == "si" ]; then
-            echo -e "${yellowColour}[+]${endColour}${grayColour} Subiendo archivos...${endColour}"
-            break
-
-          elif [ "$respuesta" == "no" ]; then
-            echo -e "\n${yellowColour}[+]${endColour}${grayColour} Concluimos con el programa${endColour}"
-            break 
-          else 
-
-            echo -e "${redColour}[!] Solo puedes responder con si o no en minusculas...${endColour}"
-            echo -e "\n${yellowColour}[+]${endColour}${grayColour} Quieres subir el backup al mikrotik? (si o no)...${endColour}"&& read respuesta
-          fi 
-        done
       break
     elif [ "$version" == "7" ]; then
       echo -e "\n${yellowColour}[+]${endColour}${grayColour} Como quieres que se llame el backup:${endColour}\n"&& read nombre 
@@ -366,20 +370,6 @@ function backupMikrotik(){
       
       echo -e "\n${yellowColour}[+]${endColour}${grayColour} Esta listo el backup...${endColour}"
       echo -e "\n${yellowColour}[+]${endColour}${grayColour} Quieres subir el backup al mikrotik? (si o no)...${endColour}"&& read respuesta
-        while true; do 
-          if [ "$respuesta" == "si" ]; then
-            echo -e "${yellowColour}[+]${endColour}${grayColour} Subiendo archivos...${endColour}"
-            break
-
-          elif [ "$respuesta" == "no" ]; then
-            echo -e "\n${yellowColour}[+]${endColour}${grayColour} Concluimos con el programa${endColour}"
-            break 
-          else 
-
-            echo -e "${redColour}[!] Solo puedes responder con si o no en minusculas...${endColour}"
-            echo -e "\n${yellowColour}[+]${endColour}${grayColour} Quieres subir el backup al mikrotik? (si o no)...${endColour}"&& read respuesta
-          fi 
-        done
       break
     else 
       echo -e "${redColour}[!] Version erronea....${endColour}"
@@ -390,6 +380,39 @@ function backupMikrotik(){
 
 
 }
+
+function sendFile (){
+  user=$1 
+  ip=$2 
+  port=$3
+
+  activeSSHConnection
+
+  echo -e "${yellowColour}\n[+]${endColour} ${grayColour}Almacenar clave${endColour}${purpleColour} ->${endColour}"&& read password
+  checkSSHConnection
+
+  ls -l
+
+  echo -e "\n${yellowColour}[+]${endColour}${grayColour} Que archivo quieres subir?${endColour}"&& read archivo2
+  echo -e "\n${yellowColour}[+]${endColour}${grayColour} Que nombre le vas a poner al archivo en el mikrotik? (.rsc si es un backup)${endColour}"&& read archivo3 
+  while true; do
+    if [ -s $archivo2 ]; then
+      echo -e "\n${yellowColour}[+]${endColour}${grayColour} Subiendo archivo...${endColour}"
+      sleep 3
+      if [ "$port" == "22"]; then
+        sshpass -p "$password" scp -r ./$archivo2 $user@$ip:$archivo3       
+      else
+        sshpass -p "$password" scp -P $port -r ./$archivo2$user@$ip:$archivo3
+      fi
+      break 
+    else 
+      echo -e "\n${redColour}[!] No tiene contenido o no exite el archivo...${endColour}"
+      echo -e "\n${yellowColour}[+]${endColour}${grayColour} Que archivo quieres subir?${endColour}"&& read archivo2
+      echo -e "\n${yellowColour}[+]${endColour}${grayColour} Que nombre le vas a poner al archivo en el mikrotik? (.rsc si es un backup)${endColour}"&& read archivo3 
+    fi
+  done
+
+}
 #contadores
 declare -i chivato_ip=0
 declare -i chivato_user=0
@@ -397,7 +420,7 @@ declare -i parameter_counter=0
 declare -i chivato_port=0
 
 #opciones y argumentos
-while getopts "u:i:fqhbp:" arg; do 
+while getopts "u:i:fqhbsrp:" arg; do 
   case $arg in
     u) user=$OPTARG;;
     i) ip=$OPTARG;;
@@ -405,6 +428,8 @@ while getopts "u:i:fqhbp:" arg; do
     f) chivato_user=1; chivato_ip=1; chivato_port=1; let parameter_counter+=1 ;;
     q) chivato_user=1; chivato_ip=1; chivato_port=1; let parameter_counter+=2 ;;
     b) chivato_user=1; chivato_ip=1; chivato_port=1; let parameter_counter+=3 ;;
+    s) chivato_user=1; chivato_ip=1; chivato_port=1; let parameter_counter+=4 ;;
+    r) let parameter_counter+=5 ;;
     h) ;;
   esac
 done
@@ -416,8 +441,13 @@ elif [ $parameter_counter -eq 2 ] && [ $chivato_user -eq 1 ] && [ $chivato_ip -e
   queueSimple $user $ip $port
 elif [ $parameter_counter -eq 3 ] && [ $chivato_user -eq 1 ] && [ $chivato_ip -eq 1 ] && [ $chivato_port -eq 1 ]; then
   backupMikrotik $user $ip $port
+elif [ $parameter_counter -eq 4 ] && [ $chivato_user -eq 1 ] && [ $chivato_ip -eq 1 ] && [ $chivato_port -eq 1 ]; then
+  sendFile $user $ip $port
+elif [ $parameter_counter -eq 5 ]; then
+  reusoQueuing 
 else
   helpPanel 
 fi
+
 
 
