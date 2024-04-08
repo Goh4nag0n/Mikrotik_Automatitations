@@ -162,7 +162,7 @@ function verifyQueuesimple(){
     
     fi
   fi 
-  rm colasenequipo.txt
+  rm $archivo
 }
 
 function reusoQueuing (){
@@ -312,7 +312,7 @@ function queueSimple (){
   while read line; do 
 
     echo -e "${yellowColour}[+]${endColour}${grayColour} Insertando cola con la siguiente ip:${endColour}${blueColour} $line ${endColour}"
-    sleep 0.4
+    sleep 0.2
     let cantidad+=1
  
     if [ "$port" == 22 ]; then
@@ -325,7 +325,8 @@ function queueSimple (){
 
     fi
 
-  done < $archivo 
+  done < $file
+
   tput civis
   echo -e "\n${yellowColour}[+]${endColour}${grayColour} Estamos ingresando un total de${endColour}${blueColour} $cantidad${endColour}${grayColour} colas${endColour}"
   sleep 5
@@ -333,10 +334,10 @@ function queueSimple (){
   echo -e "\n${yellowColour}[+]${endColour}${grayColour} Empezamos a ingresar las colas por favor paciencia...${endColour}"
   bash colas.txt
   tput cnorm
-  echo -e "\n${yellowColour}[+]${endColour}${grayColour} Se terminaron de crear las colas....${endColour}"
+  echo -e "\n${yellowColour}[+]${endColour}${grayColour} Se t:erminaron de crear las colas....${endColour}"
   echo -e "\n${yellowColour}[+]${endColour}${grayColour} Borramos archivos residuales...${endColour}" 
-  rm $archivo
-  rm colas.txt
+  rm $file
+  rm $colas
 }
 
 function backupMikrotik(){
@@ -447,6 +448,8 @@ elif [ $parameter_counter -eq 5 ]; then
   reusoQueuing 
 else
   helpPanel 
+fi
+
 fi
 
 
