@@ -34,7 +34,6 @@ function helpPanel (){
 }
 
 
-
 function activeSSHConnection(){
 
     if [ "$port" == 22 ]; then 
@@ -258,6 +257,7 @@ function filterData (){
   while true; do 
     if [ $respuesta == "si" ]; then
       echo -e "\n${yellowColour}[+]${endColour}${grayColour} procedemos a enviar los comandos...${endColour}"
+      activeSSHConnection
       keySsh
       break
     elif [ $respuesta == "no" ]; then
@@ -299,6 +299,7 @@ function queueSimple (){
   while true; do 
     if [ $respuesta == "si" ]; then
       echo -e "\n${yellowColour}[+]${endColour}${grayColour} procedemos a enviar los comandos...${endColour}"
+      activeSSHConnection
       keySsh
       break
     elif [ $respuesta == "no" ]; then
@@ -409,26 +410,16 @@ function queueSimple (){
 
   while read line; do 
 
-    echo -e "${yellowColour}[+]${endColour}${grayColour} Insertando cola con la siguiente ip:${endColour}${blueColour} $line ${endColour}"
-    sleep 0.2
     let cantidad+=1
- 
-    if [ "$port" == 22 ]; then
-      colaSimples="$comando queue simple add queue=\"$nombresubida/$nombredescarga\" target=\"$line\" name=\"$line\""
-      echo "$colaSimples" >> "$colas"
-
-    else
-      colaSimples="$comando queue simple add queue=\"$nombresubida/$nombredescarga\" target=\"$line\" name=\"$line\"" 
-      echo "$colaSimples" >> "$colas"
-
-    fi
-
+    colaSimples="$comando queue simple add queue=\"$nombresubida/$nombredescarga\" target=\"$line\" name=\"$line\""
+    echo "$colaSimples" >> "$colas"
+    
   done < $file
 
   tput civis
-  echo -e "\n${yellowColour}[+]${endColour}${grayColour} Estamos ingresando un total de${endColour}${blueColour} $cantidad${endColour}${grayColour} colas${endColour}"
-  sleep 5
   clear
+  echo -e "\n${yellowColour}[+]${endColour}${grayColour} Estamos ingresando un total de${endColour}${blueColour} $cantidad${endColour}${grayColour} colas${endColour}"
+  sleep 3
   echo -e "\n${yellowColour}[+]${endColour}${grayColour} Empezamos a ingresar las colas por favor paciencia...${endColour}"
   bash colas.txt
   tput cnorm
