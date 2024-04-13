@@ -23,13 +23,16 @@ function helpPanel (){
   echo -e "\t${blueColour}u)${endColour}${grayColour} Usuario para conexion ssh${endColour}"
   echo -e "\t${blueColour}i)${endColour}${grayColour} direccion ipv4 del router Mikrotik${endColour}"
   echo -e "\t${blueColour}p)${endColour}${grayColour} puerto ssh${endColour}"
-  echo -e "\t${blueColour}f)${endColour}${grayColour} Filtramos la data de los usuarios del servidor Mikrotik${endColour} ${purpleColour}->${endColour} ${redColour}(-f -u usuario -i direccion -p puerto)${endColour}"
-  echo -e "\t${blueColour}q)${endColour}${grayColour} hacer pcq con rafagas, generar colas simples determinar y verificar si hay colas previamente creadas${endColour}${purpleColour} ->${endColour}${redColour} (-q -u usuario -i direccion -p puerto)${endColour}"
+  echo -e "\t${blueColour}f)${endColour}${grayColour} Filtramos la data de los usuarios del servidor Mikrotik${endColour} ${purpleColour}->${endColour}"
+  echo -e "\t${redColour}(-f -u usuario -i direccion -p puerto)${endColour}"
+  echo -e "\t${blueColour}q)${endColour}${grayColour} hacer pcq con rafagas, generar colas simples determinar y verificar si hay colas previamente creadas${endColour}${purpleColour} ->${endColour}"
+  echo -e "\t${redColour}(-q -u usuario -i direccion -p puerto)${endColour}"
   echo -e "\t${blueColour}b)${endColour}${grayColour} hacer backups de equipos Mikrotik ${endColour}${purpleColour} ->${endColour}"   
   echo -e "\t${redColour}(-b -u usuario -i direccion -p puerto)${endColour}"
   echo -e "\t${blueColour}s)${endColour}${grayColour} Enviar archivos al Mikrotik en caso de ser necesario que sea backup recordar ponerle de nombre de subida .rsc${endColour}${purpleColour} ->${endColour}"
   echo -e "\t${redColour}(-s -u usuario -i direccion -p puerto)${endColour}"
 }
+
 
 
 function activeSSHConnection(){
