@@ -34,25 +34,23 @@ function helpPanel (){
 
 function activeSSHConnection(){
 
-    if [ "$port" == 22 ]; then
-      if ssh $user@$ip; then
+    if [ "$port" == 22 ]; then 
+      loginSsh="ssh $user@$ip"
+      if $loginSsh interface print > /dev/null 2>&1; then
         echo -e "\n${yellowColour}[+]${endColour}${grayColour} La conexion fue exitosa con el siguiente comando...${endColour} ${purpleColour}->${endColour} ${blueColour}[ssh $user@$ip]${endColour}"
-        sleep 4
+        sleep 2
         clear
-        comando="ssh $user@$ip"
-        comando2="scp $user@$ip"
+
       else 
         echo -e "\n${redColour}[!] Usuario o clave erroneo${endColour}"
         exit 1
       fi
     else
-      if ssh -p $port $user@$ip; then
+      loginSsh="ssh -p $port $user@$ip"
+      if $loginSsh interface print > /dev/null 2>&1; then
         echo -e "\n${yellowColour}[+]${endColour}${grayColour} La conexion fue exitosa con el siguiente comando...${endColour}${purpleColour} ->${endColour} ${blueColour}[ssh $user@$ip -p $port]${endColour}"
-        sleep 4
+        sleep 2
         clear
-        comando="ssh $user@$ip -p $port"
-        comando2="scp -P $port $user@$ip"
-        comando3="scp -P $port -r ./$archivo2 $user@$ip:$archivo3"
       else
         echo -e "\n${redColour}[!] Usuario o clave erroneo${endColour}"
         exit 1
@@ -60,21 +58,30 @@ function activeSSHConnection(){
     fi
 }
 
-
-
 function checkSSHConnection(){
   while true; do
-    if [ "$port" == 22 ]; then 
-      if sshpass -p "$password" ssh $user@$ip; then
+    if [ "$port" == 22 ]; then
+      loginSsh="sshpass -p "$password" ssh $user@$ip" 
+      if $loginSsh interface print >/dev/null 2>&1; then
+
         echo -e "\n${yellowColour}[+]${endColour}${grayColour} La clave es correcta...${endColour}"
+        sleep 2
+        comando="sshpass -p $password ssh $user@$ip"
+        comando2="sshpass -p $password scp $user@$ip"
+        comando3="sshpass -p $password scp -r ./$archivo2 $user@$ip:$archivo3"
         break
       else
         echo -e "\n${redColour}[!] La clave es erronea...${endColour}"
         echo -e "\n${yellowColour}\n[+]${endColour}${grayColour} Almacenar clave${endColour}${purpleColour} ->${endColour}"&& read password
       fi
     else
-      if sshpass -p "$password" ssh -p $port $user@$ip; then
+      loginSsh="sshpass -p "$password" ssh -p $port $user@$ip" 
+      if $loginSsh interface print >/dev/null 2>&1; then
         echo -e "\n${yellowColour}[+]${endColour}${grayColour} La clave es correcta...${endColour}"
+        sleep 2
+        comando="sshpass -p $password ssh $user@$ip -p $port"
+        comando2="sshpass -p $password scp -P $port $user@$ip"
+        comando3="ssshpass -p $password scp -P $port -r ./$archivo2 $user@$ip:$archivo3"
         break
       else
         echo -e "\n${redColour}[!] La clave es erronea...${endColour}"
@@ -83,6 +90,61 @@ function checkSSHConnection(){
     fi
   done
 }
+
+function keySsh (){
+  sshfile=~/.ssh/id_rsa.pub
+
+  if  ls $sshfile > /dev/null 2>&1; then
+    echo -e "\n${yellowColour}[+]${endColour}${grayColour} ya tienes las llaves del equipo...${endColour}"
+  else 
+    echo -e "\n${yellowColour}[+]${endColour}${grayColour} Creando llaves publicas y privadas...${endColour}\n"
+    ssh-keygen -t rsa
+  fi
+  if [ $port -eq 22 ]; then
+    echo -e "\n${yellowColour}[+]${endColour}${grayColour} quieres subir la llave publica al mikrotik o ya la tienes implementada?${endColour}\n" && read respuesta
+    while true; do
+      if [ $respuesta == "si" ]; then
+        echo -e "\n${yellowColour}[+]${endColour}${grayColour} como quieres que se llame la llave?${endColour}" && read keypublic
+        scp ${sshfile} $user@$ip:/$keypublic.pub
+        ssh $user@$ip /user ssh-keys import public-key-file=$keypublic.pub user=$user
+        break 
+      elif [ $respuesta == "no" ]; then
+        echo -e "\n${yellowColour}[+]${endColour}${grayColour} Sigamos con el codigo...${endColour}\n"
+        break
+      else
+        echo -e "${redColour}[!]solo se puede responder con si o no en minusculas...${endColour}"
+        echo -e "\n${yellowColour}[+]${endColour}${grayColour} quieres subir la llave publica al mikrotik o ya la tienes implementada?${endColour}\n" && read respuesta
+      fi
+    done
+
+    comando="ssh $user@$ip"
+    comando2="scp $user@$ip" 
+    comando3="scp -r ./$archivo2 $user@$ip:$archivo3"
+
+  else
+    echo -e "\n${yellowColour}[+]${endColour}${grayColour} quieres subir la llave publica al mikrotik o ya la tienes implementada?${endColour}\n" && read respuesta
+    while true; do
+      if [ $respuesta == "si" ]; then
+        echo -e "\n${yellowColour}[+]${endColour}${grayColour} como quieres que se llame la llave?${endColour}" && read keypublic
+        scp -P $port ${sshfile} $user@$ip:/$keypublic.pub
+    ssh $user@$ip -p $port /user ssh-keys import public-key-file=$keypublic.pub user=$user
+        break 
+      elif [ $respuesta == "no" ]; then
+        echo -e "\n${yellowColour}[+]${endColour}${grayColour} Sigamos con el codigo...${endColour}\n"
+        break
+      else
+        echo -e "${redColour}[!]solo se puede responder con si o no en minusculas...${endColour}"
+        echo -e "\n${yellowColour}[+]${endColour}${grayColour} quieres subir la llave publica al mikrotik o ya la tienes implementada?${endColour}\n" && read respuesta
+      fi
+    done
+
+    comando="ssh -p $port $user@$ip"
+    comando2="scp -P $port $user@$ip" 
+    comando3="scp -P $port -r ./$archivo2 $user@$ip:$archivo3"
+
+  fi
+}
+
 
 function verifyQueuesimple(){
   #verificar si hay colas simples creadas
@@ -189,17 +251,36 @@ function filterData (){
   ip=$2
   port=$3
   
-  activeSSHConnection
+  echo -e "${yellowColour}[+]${endColour} Si es v7 puedes logearte sin clave con llave privada y publica quieres ingresar de esta forma?\n"&& read respuesta 
+  while true; do 
+    if [ $respuesta == "si" ]; then
+      echo -e "\n${yellowColour}[+]${endColour}${grayColour} procedemos a enviar los comandos...${endColour}"
+      keySsh
+      break
+    elif [ $respuesta == "no" ]; then
+      echo -e "\n${yellowColour}[+]${endColour}${grayColour} por la manera tradicional...${endColour}"
+      activeSSHConnection
 
-  echo -e "${yellowColour}\n[+]${endColour} ${grayColour}Almacenar clave${endColour}${purpleColour} ->${endColour}"&& read password
-  checkSSHConnection
+      echo -e "${yellowColour}\n[+]${endColour} ${grayColour}Almacenar clave${endColour}${purpleColour} ->${endColour}"&& read password
+
+      checkSSHConnection
+      break
+    else
+      echo -e "\n${redColour}[!] solo puedes responder con si o no en minusculas...${endColour}"
+
+      echo -e "\n${yellowColour}[+]${endColour} Si es v7 puedes logearte sin clave con llave privada y publica quieres ingresar de esta forma?\n"&& read respuesta     
+    fi
+  done
+  
+  clear
 
   echo -e "${yellowColour}\n[+]${endColour}${grayColour} Que lista quieres descargar del mikrotik${endColour}${purpleColour} ->${endColour}"&& read address_list
   echo -e "${yellowColour}\n[+]${endColour}${grayColour} en que archivo quieres que guarde la data${endColour}${purpleColour} ->${endColour}"&& read file
   echo -e "\n${yellowColour}\n[+]${endColour}${grayColour} filtrando data en mikrotik...${endColour}"
-  sshpass -p "$password" $comando ip firewall address-list print file=$file where list=$address_list
+  
+  $comando ip firewall address-list print file=$file where list=$address_list
   echo -e "\n${yellowColour}\n[+]${endColour}${grayColour} Descargando data...${endColour}"
-  sshpass -p "$password" $comando2:/$file.txt .
+  $comando2:/$file.txt .
   echo -e "\n${yellowColour}\n[+]${endColour}${grayColour} Filtramos y guardamos la informacion importante...${endColour}"
 
   cat $file.txt | awk 'NR>5 {print $4}' | sponge $file.txt
@@ -209,6 +290,27 @@ function queueSimple (){
   user=$1
   ip=$2
   port=$3
+  clear
+
+  echo -e "${yellowColour}[+]${endColour} Si es v7 puedes logearte sin clave con llave privada y publica quieres ingresar de esta forma?\n"&& read respuesta 
+  while true; do 
+    if [ $respuesta == "si" ]; then
+      echo -e "\n${yellowColour}[+]${endColour}${grayColour} procedemos a enviar los comandos...${endColour}"
+      keySsh
+      break
+    elif [ $respuesta == "no" ]; then
+      echo -e "\n${yellowColour}[+]${endColour}${grayColour} por la manera tradicional...${endColour}"
+      activeSSHConnection
+      echo -e "${yellowColour}\n[+]${endColour} ${grayColour}Almacenar clave${endColour}${purpleColour} ->${endColour}"&& read password
+      checkSSHConnection
+      break
+    else
+      echo -e "\n${redColour}[!] solo puedes responder con si o no en minusculas...${endColour}"
+
+      echo -e "\n${yellowColour}[+]${endColour} Si es v7 puedes logearte sin clave con llave privada y publica quieres ingresar de esta forma?\n"&& read respuesta     
+    fi
+  done
+
   clear
 
   #DEFINIR RAFAGAS Y COLAS
@@ -228,10 +330,7 @@ function queueSimple (){
 
   while true; do
     if [ "$respuesta" == "si" ]; then
-      echo -e "\n${yellowColour}[+]${endColour} ${grayColour}Almacenar clave${endColour}${purpleColour} ->${endColour}"&& read password
       
-      checkSSHConnection
-
       thresHold="$thresHold"M
       burstLimit="$burstLimit"M
       pcqRate="$pcqRate"M
@@ -245,15 +344,11 @@ function queueSimple (){
 
       echo -e "\n${yellowColour}[+]${endColour}${grayColour} Asi queda la subida${endColour}${purpleColour} ->${endColour}${greenColour} add kind=pcq name="$nombresubida" pcq-burst-rate=$burstLimit pcq-burst-threshold=$thresHold pcq-burst-time=$BurstTime pcq-classifier=src-address pcq-rate=$pcqRate ${endColour}"
       
-      if [ "$port" == 22 ]; then
-        sshpass -p "$password" ssh $user@$ip queue type add kind=pcq name="$nombredescarga" pcq-burst-rate=$burstLimit pcq-burst-threshold=$thresHold pcq-burst-time=$burstTime pcq-classifier=dst-address pcq-rate=$pcqRate
+    $comando queue type add kind=pcq name="$nombredescarga" pcq-burst-rate=$burstLimit pcq-burst-threshold=$thresHold pcq-burst-time=$burstTime pcq-classifier=dst-address pcq-rate=$pcqRate
 
-        sshpass -p "$password" ssh $user@$ip queue type add kind=pcq name="$nombresubida" pcq-burst-rate=$burstLimit pcq-burst-threshold=$thresHold pcq-burst-time=$burstTime pcq-classifier=src-address pcq-rate=$pcqRate
-      else
-        sshpass -p "$password" ssh -p $port $user@$ip queue type add kind=pcq name="$nombredescarga" pcq-burst-rate=$burstLimit pcq-burst-threshold=$thresHold pcq-burst-time=$burstTime pcq-classifier=dst-address pcq-rate=$pcqRate
-        sshpass -p "$password" ssh -p $port $user@$ip queue type add kind=pcq name="$nombresubida" pcq-burst-rate=$burstLimit pcq-burst-threshold=$thresHold pcq-burst-time=$burstTime pcq-classifier=src-address pcq-rate=$pcqRate
-      fi
-      break
+    $comando queue type add kind=pcq name="$nombresubida" pcq-burst-rate=$burstLimit pcq-burst-threshold=$thresHold pcq-burst-time=$burstTime pcq-classifier=src-address pcq-rate=$pcqRate      
+
+    break
 
     elif [ "$respuesta" == "no" ]; then
       echo -e "${yellowColour}[+]${endColour}${grayColour} Cuanto es lo minimo que quieres que naveguen los usuarios${endColour}"&& read pcqRate
@@ -316,12 +411,12 @@ function queueSimple (){
     let cantidad+=1
  
     if [ "$port" == 22 ]; then
-      comando="sshpass -p "$password" ssh $user@$ip queue simple add queue=\"$nombresubida/$nombredescarga\" target=\"$line\" name=\"$line\""
-      echo "$comando" >> "$colas"
+      colaSimples="$comando queue simple add queue=\"$nombresubida/$nombredescarga\" target=\"$line\" name=\"$line\""
+      echo "$colaSimples" >> "$colas"
 
     else
-      comando="sshpass -p "$password" ssh -p $port $user@$ip queue simple add queue=\"$nombresubida/$nombredescarga\" target=\"$line\" name=\"$line\"" 
-      echo "$comando" >> "$colas"
+      colaSimples="$comando queue simple add queue=\"$nombresubida/$nombredescarga\" target=\"$line\" name=\"$line\"" 
+      echo "$colaSimples" >> "$colas"
 
     fi
 
@@ -449,8 +544,3 @@ elif [ $parameter_counter -eq 5 ]; then
 else
   helpPanel 
 fi
-
-fi
-
-
-
