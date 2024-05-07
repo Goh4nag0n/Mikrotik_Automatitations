@@ -286,7 +286,7 @@ function filterData (){
   $comando2:/$file.txt .
   echo -e "\n${yellowColour}\n[+]${endColour}${grayColour} Filtramos y guardamos la informacion importante...${endColour}"
 
-  cat $file.txt | awk 'NR>5 {print $3}' |tr -d 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJLMNOPQRSTUVWXYZ'|sort -u | sponge $file.txt
+  cat $file.txt | awk 'NR>5 {print $4}' |tr -d 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJLMNOPQRSTUVWXYZ'|sort -u | sponge $file.txt
 }
 
 function queueSimple (){
