@@ -35,7 +35,7 @@ function helpPanel (){
 
 
 function activeSSHConnection(){
-
+    clear
     if [ "$port" == 22 ]; then 
       loginSsh="ssh $user@$ip"
       if $loginSsh interface print > /dev/null 2>&1; then
@@ -61,6 +61,7 @@ function activeSSHConnection(){
 }
 
 function checkSSHConnection(){
+  clear
   while true; do
     if [ "$port" == 22 ]; then
       loginSsh="sshpass -p "$password" ssh $user@$ip" 
@@ -95,7 +96,7 @@ function checkSSHConnection(){
 
 function keySsh (){
   sshfile=~/.ssh/id_rsa.pub
-
+  clear
   if  ls $sshfile > /dev/null 2>&1; then
     echo -e "\n${yellowColour}[+]${endColour}${grayColour} ya tienes las llaves del equipo...${endColour}"
   else 
@@ -252,7 +253,7 @@ function filterData (){
   user=$1
   ip=$2
   port=$3
-  
+  clear
   echo -e "${yellowColour}[+]${endColour} Si es v7 puedes logearte sin clave con llave privada y publica quieres ingresar de esta forma?\n"&& read respuesta 
   while true; do 
     if [ $respuesta == "si" ]; then
@@ -276,18 +277,51 @@ function filterData (){
   done
   
   clear
+  while true; do 
+    echo -e "${yellowColour}[+]${endColour}${grayColour} Tienes tu data en ppp secret o en address-list?${endColour}\n" && read filter
+    
+    if [ $filter == "secret" ]; then
+      echo -e "${yellowColour}\n[+]${endColour}${grayColour} Que lista quieres descargar del mikrotik${endColour}${purpleColour} ->${endColour}\n" && read profile
+      echo -e "${yellowColour}\n[+]${endColour}${grayColour} en que archivo quieres que guarde la data${endColour}${purpleColour} ->${endColour}\n" && read file
+      echo -e "\n${yellowColour}\n[+]${endColour}${grayColour} filtrando data en mikrotik...${endColour}"
+      
+      $comando ppp secret print file=$file where profile=$profile
+      echo -e "\n${yellowColour}[+]${endColour}${grayColour} Descargando data...${endColour}"
+      $comando2:/$file.txt .
+      echo -e "\n${yellowColour}[+]${endColour}${grayColour} Filtramos y guardamos la informacion importante...${endColour}"
+      cat $file.txt | awk '{print $5}' |sort -u | grep -P '^(\d{1,3}\.){3}\d{1,3}$' | sponge $file.txt   
+      break
 
-  echo -e "${yellowColour}\n[+]${endColour}${grayColour} Que lista quieres descargar del mikrotik${endColour}${purpleColour} ->${endColour}"&& read address_list
-  echo -e "${yellowColour}\n[+]${endColour}${grayColour} en que archivo quieres que guarde la data${endColour}${purpleColour} ->${endColour}"&& read file
-  echo -e "\n${yellowColour}\n[+]${endColour}${grayColour} filtrando data en mikrotik...${endColour}"
-  
-  $comando ip firewall address-list print file=$file where list=$address_list
-  echo -e "\n${yellowColour}\n[+]${endColour}${grayColour} Descargando data...${endColour}"
-  $comando2:/$file.txt .
-  echo -e "\n${yellowColour}\n[+]${endColour}${grayColour} Filtramos y guardamos la informacion importante...${endColour}"
-
-  cat $file.txt | awk 'NR>5 {print $4}' |tr -d 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJLMNOPQRSTUVWXYZ'|sort -u | sponge $file.txt
-}
+    elif [ $filter == "address-list" ]; then
+      echo -e "${yellowColour}\n[+]${endColour}${grayColour} Que lista quieres descargar del mikrotik${endColour}${purpleColour} ->${endColour}\n"&& read address_list
+      echo -e "${yellowColour}\n[+]${endColour}${grayColour} en que archivo quieres que guarde la data${endColour}${purpleColour} ->${endColour}\n"&& read file
+      echo -e "\n${yellowColour}[+]${endColour}${grayColour} filtrando data en mikrotik...${endColour}\n"
+      $comando ip firewall address-list print file=$file where list=$address_list
+      while true; do 
+        echo -e "\n${yellowColour}[+]${endColour}${grayColour} La address-list tiene comentarios o solo tiene direcciones ip?${endColour}\n"&& read comment
+        if [ $comment == "comentarios" ]; then
+          echo -e "\n${yellowColour}[+]${endColour}${grayColour} Descargando data...${endColour}"
+          $comando2:/$file.txt .
+          echo -e "\n${yellowColour}[+]${endColour}${grayColour} Filtramos y guardamos la informacion importante...${endColour}"
+          cat $file.txt | awk '{print $3}'| sort -u | grep -P '^(\d{1,3}\.){3}\d{1,3}$' | sponge $file.txt
+          break
+        elif [ $comment == "direcciones" ]; then
+          echo -e "\n${yellowColour}[+]${endColour}${grayColour} Descargando data...${endColour}"
+          $comando2:/$file.txt .
+          echo -e "\n${yellowColour}[+]${endColour}${grayColour} Filtramos y guardamos la informacion importante...${endColour}"
+          cat $file.txt | awk '{print $4}' |sort -u | grep -P '^(\d{1,3}\.){3}\d{1,3}$' | sponge $file.txt
+          break
+        else
+          echo -e "\n${redColour}[!] solo puedes responder con comentarios o direcciones en minusculas${endColour}"
+        fi 
+      done
+      break
+    else
+      echo -e "\n${redColour}[!] solo puedes responder con secret o address-list en minusculas${endColour}"
+      echo -e "\n${yellowColour}[+]${endColour}${grayColour} Tienes tu data en ppp secret o en address-list?${endColour}\n" && read filter
+    fi
+  done
+ }
 
 function queueSimple (){
   user=$1
