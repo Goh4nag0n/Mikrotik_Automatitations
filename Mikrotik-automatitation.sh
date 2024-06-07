@@ -246,7 +246,6 @@ function reusoQueuing (){
   done
   reuso=$(echo "scale=2; $total_megas / $total" | bc)  
   echo -e "\n${yellowColour}[+]${endColour}${grayColour} tu reuso es de ${endColour}${purpleColour}$reuso${endColour}${grayColour} por usuario${endColour}"
-
 }
 
 function filterData (){
@@ -258,21 +257,23 @@ function filterData (){
   while true; do 
     if [ $respuesta == "si" ]; then
       echo -e "\n${yellowColour}[+]${endColour}${grayColour} procedemos a enviar los comandos...${endColour}"
+      tput civis
       activeSSHConnection
       keySsh
+      tput cnorm
       break
     elif [ $respuesta == "no" ]; then
       echo -e "\n${yellowColour}[+]${endColour}${grayColour} por la manera tradicional...${endColour}"
+      tput civis 
       activeSSHConnection
-
-      echo -e "${yellowColour}\n[+]${endColour} ${grayColour}Almacenar clave${endColour}${purpleColour} ->${endColour}"&& read password
-
+      echo -e "${yellowColour}\n[+]${endColour} ${grayColour}Almacenar clave${endColour}${purpleColour} ->${endColour}\n"&& read password
       checkSSHConnection
+      tput cnorm
       break
     else
+      
       echo -e "\n${redColour}[!] solo puedes responder con si o no en minusculas...${endColour}"
-
-      echo -e "\n${yellowColour}[+]${endColour} Si es v7 puedes logearte sin clave con llave privada y publica quieres ingresar de esta forma?\n"&& read respuesta     
+      echo -e "\n${yellowColour}[+]${endColour} Si es v7 puedes logearte sin clave con llave privada y publica quieres ingresar de esta forma?\n"&& read respuesta
     fi
   done
   
@@ -284,37 +285,21 @@ function filterData (){
       echo -e "${yellowColour}\n[+]${endColour}${grayColour} Que lista quieres descargar del mikrotik${endColour}${purpleColour} ->${endColour}\n" && read profile
       echo -e "${yellowColour}\n[+]${endColour}${grayColour} en que archivo quieres que guarde la data${endColour}${purpleColour} ->${endColour}\n" && read file
       echo -e "\n${yellowColour}\n[+]${endColour}${grayColour} filtrando data en mikrotik...${endColour}"
-      
       $comando ppp secret print file=$file where profile=$profile
       echo -e "\n${yellowColour}[+]${endColour}${grayColour} Descargando data...${endColour}"
       $comando2:/$file.txt .
       echo -e "\n${yellowColour}[+]${endColour}${grayColour} Filtramos y guardamos la informacion importante...${endColour}"
-      cat $file.txt | awk '{print $5}' |sort -u | grep -P '^(\d{1,3}\.){3}\d{1,3}$' | sponge $file.txt   
+      cat $file.txt | awk -v FS="$profile" '{print $2}' | sort -u | sponge $file.txt       
       break
 
     elif [ $filter == "address-list" ]; then
       echo -e "${yellowColour}\n[+]${endColour}${grayColour} Que lista quieres descargar del mikrotik${endColour}${purpleColour} ->${endColour}\n"&& read address_list
       echo -e "${yellowColour}\n[+]${endColour}${grayColour} en que archivo quieres que guarde la data${endColour}${purpleColour} ->${endColour}\n"&& read file
-      echo -e "\n${yellowColour}[+]${endColour}${grayColour} filtrando data en mikrotik...${endColour}\n"
       $comando ip firewall address-list print file=$file where list=$address_list
-      while true; do 
-        echo -e "\n${yellowColour}[+]${endColour}${grayColour} La address-list tiene comentarios o solo tiene direcciones ip?${endColour}\n"&& read comment
-        if [ $comment == "comentarios" ]; then
-          echo -e "\n${yellowColour}[+]${endColour}${grayColour} Descargando data...${endColour}"
-          $comando2:/$file.txt .
-          echo -e "\n${yellowColour}[+]${endColour}${grayColour} Filtramos y guardamos la informacion importante...${endColour}"
-          cat $file.txt | awk '{print $3}'| sort -u | grep -P '^(\d{1,3}\.){3}\d{1,3}$' | sponge $file.txt
-          break
-        elif [ $comment == "direcciones" ]; then
-          echo -e "\n${yellowColour}[+]${endColour}${grayColour} Descargando data...${endColour}"
-          $comando2:/$file.txt .
-          echo -e "\n${yellowColour}[+]${endColour}${grayColour} Filtramos y guardamos la informacion importante...${endColour}"
-          cat $file.txt | awk '{print $4}' |sort -u | grep -P '^(\d{1,3}\.){3}\d{1,3}$' | sponge $file.txt
-          break
-        else
-          echo -e "\n${redColour}[!] solo puedes responder con comentarios o direcciones en minusculas${endColour}"
-        fi 
-      done
+      echo -e "\n${yellowColour}[+]${endColour}${grayColour} Descargando data...${endColour}"
+      $comando2:/$file.txt .
+      echo -e "\n${yellowColour}[+]${endColour}${grayColour} Filtramos y guardamos la informacion importante...${endColour}"
+      cat $file.txt | awk -v FS="$address_list" '{print $2}'| awk '{print $1}'| sort -u | sponge $file.txt
       break
     else
       echo -e "\n${redColour}[!] solo puedes responder con secret o address-list en minusculas${endColour}"
@@ -328,27 +313,28 @@ function queueSimple (){
   ip=$2
   port=$3
   clear
-
   echo -e "${yellowColour}[+]${endColour} Si es v7 puedes logearte sin clave con llave privada y publica quieres ingresar de esta forma?\n"&& read respuesta 
   while true; do 
     if [ $respuesta == "si" ]; then
       echo -e "\n${yellowColour}[+]${endColour}${grayColour} procedemos a enviar los comandos...${endColour}"
+      tput civis
       activeSSHConnection
       keySsh
+      tput cnorm
       break
     elif [ $respuesta == "no" ]; then
       echo -e "\n${yellowColour}[+]${endColour}${grayColour} por la manera tradicional...${endColour}"
+      tput civis
       activeSSHConnection
       echo -e "${yellowColour}\n[+]${endColour} ${grayColour}Almacenar clave${endColour}${purpleColour} ->${endColour}"&& read password
       checkSSHConnection
+      tput cnorm
       break
     else
       echo -e "\n${redColour}[!] solo puedes responder con si o no en minusculas...${endColour}"
-
-      echo -e "\n${yellowColour}[+]${endColour} Si es v7 puedes logearte sin clave con llave privada y publica quieres ingresar de esta forma?\n"&& read respuesta     
+      echo -e "\n${yellowColour}[+]${endColour} Si es v7 puedes logearte sin clave con llave privada y publica quieres ingresar de esta forma?\n"&& read respuesta
     fi
   done
-
   clear
 
   #DEFINIR RAFAGAS Y COLAS
