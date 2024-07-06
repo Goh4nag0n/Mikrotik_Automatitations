@@ -289,7 +289,7 @@ function filterData (){
       echo -e "\n${yellowColour}[+]${endColour}${grayColour} Descargando data...${endColour}"
       $comando2:/$file.txt .
       echo -e "\n${yellowColour}[+]${endColour}${grayColour} Filtramos y guardamos la informacion importante...${endColour}"
-      cat $file.txt | awk -v FS="$profile" '{print $2}' | sort -u | sponge $file.txt       
+      cat $file.txt | awk -F 'pppoe' '{print $2}'| awk '{print $3}' | sort -u | sponge $file.txt       
       break
 
     elif [ $filter == "address-list" ]; then
