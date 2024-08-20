@@ -299,7 +299,7 @@ function filterData (){
       echo -e "\n${yellowColour}[+]${endColour}${grayColour} Descargando data...${endColour}"
       $comando2:/$file.txt .
       echo -e "\n${yellowColour}[+]${endColour}${grayColour} Filtramos y guardamos la informacion importante...${endColour}"
-      cat $file.txt | awk -v FS="$address_list" '{print $2}'| awk '{print $1}'| sort -u | sponge $file.txt
+      cat $file.txt | grep -o '[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}'| sort -u | sponge $file.txt
       break
     else
       echo -e "\n${redColour}[!] solo puedes responder con secret o address-list en minusculas${endColour}"
